@@ -17,9 +17,10 @@ var messagesChannel chan string
 var postMessagesChannel chan string
 
 const (
-	channelBufferSize        = 23
-	toolbotOK         string = "1"
-	toolbotNOK        string = "0"
+	channelBufferSize          = 23
+	messageChannelDepth        = 42
+	toolbotOK           string = "1"
+	toolbotNOK          string = "0"
 )
 
 type config struct {
@@ -35,7 +36,7 @@ type config struct {
 	EnterMessage   string   `json:"enterMessage"`
 }
 
-var inboundMQTT mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+var handleSubscribedInboundMQTT mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	postMessagesChannel <- "TOPIC: " + msg.Topic() + " MSG: " + string(msg.Payload())
 }
 
@@ -117,24 +118,25 @@ func doMQTT(config *config) {
 	}
 	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	mqttOptions := mqtt.NewClientOptions().AddBroker("tcp://" + config.Broker + ":" + config.Port).SetClientID(config.ClientID)
-	mqttOptions.SetDefaultPublishHandler(inboundMQTT)
 	mqttOptions.SetKeepAlive(2 * time.Second)
-	mqttOptions.SetPingTimeout(1 * time.Second)
 	mqttOptions.SetAutoReconnect(true)
-	mqttOptions.SetWill(config.BotStatusTopic, toolbotNOK, 0, false)
+	mqttOptions.SetMessageChannelDepth(messageChannelDepth)
+	mqttOptions.SetWill(config.BotStatusTopic, toolbotNOK, 0, true)
 
 	mqttClient := mqtt.NewClient(mqttOptions)
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
 
+	//Subscribe
 	for _, topic := range config.Topics {
-		if token := mqttClient.Subscribe(topic, 0, nil); token.Wait() && token.Error() != nil {
+		if token := mqttClient.Subscribe(topic, 0, handleSubscribedInboundMQTT); token.Wait() && token.Error() != nil {
 			panic(fmt.Sprintln(token.Error()))
 		}
 	}
+
 	//Toolbot working
-	token := mqttClient.Publish(config.BotStatusTopic, 0, false, toolbotOK)
+	token := mqttClient.Publish(config.BotStatusTopic, 0, true, toolbotOK)
 	if !token.WaitTimeout(2000) {
 		panic(fmt.Sprintln("Timeout waiting to publish"))
 	}
