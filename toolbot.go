@@ -89,7 +89,7 @@ func doSlackRTM(api *slack.Client, config *config) {
 			if config.Debug {
 				fmt.Printf("Message: %v\n", event.Msg.Text)
 			}
-			users, _ := api.GetUsers() //to publish with the nick instead of ID
+			users, _ := api.GetUsers() //to publish with the nick instead of ID -> TODO: quite expensive -> caching
 			for _, user := range users {
 				if user.ID == event.Msg.User {
 					splitted := strings.Split(event.Msg.Timestamp, ".") //converting the time
