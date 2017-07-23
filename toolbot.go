@@ -67,7 +67,7 @@ func readConfig() *config {
 }
 
 func sendMessagesFromChannel(api *slack.Client, config *config, params slack.PostMessageParameters) {
-	for {
+	for { //TODO? Add select to support "abort"-Channel
 		api.PostMessage(config.Channel, <-postMessagesChannel, params)
 	}
 }
@@ -98,7 +98,7 @@ func doSlackRTM(api *slack.Client, config *config) {
 
 	for message := range rtm.IncomingEvents {
 		switch event := message.Data.(type) {
-		case *slack.MessageEvent:
+		case *slack.MessageEvent: //TODO? Filter for config.Channel?
 			if config.Debug {
 				fmt.Printf("Message: %v\n", event.Msg.Text)
 			}
@@ -155,7 +155,7 @@ func doMQTT(config *config, wgReady *sync.WaitGroup) {
 	}
 
 	//sending the messages
-	for {
+	for { //TODO? Add select to support "abort"-Channel
 		token := mqttClient.Publish(config.Topic4Channel, 0, false, <-messagesChannel)
 		if !token.WaitTimeout(2000) {
 			fmt.Println("Timeout waiting to publish")

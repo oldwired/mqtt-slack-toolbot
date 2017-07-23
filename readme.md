@@ -25,3 +25,7 @@ All messages to specified MQTT topics get posted to the slack channel.
     "enterMessage": "Sit right there; make yourself comfortable. Remember the time we used to spend playing chess together?"
 }
 ```
+
+## Limitations
+
+At the moment all messages of all Slack channel the bot is a member of get streamed to "topic4channel"
