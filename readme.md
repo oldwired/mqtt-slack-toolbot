@@ -1,12 +1,16 @@
 # Readme
+
 Bot for Slack/MQTT Coupling
 
 ## Function
+
 All messages posted to a specific slack channel get published to a specified MQTT topic.
 All messages to specified MQTT topics get posted to the slack channel.
 
 ## Sample Config
+
 `config.json`
+
 ```javascript
 {
     "secret": "REDACTED",
@@ -21,4 +25,3 @@ All messages to specified MQTT topics get posted to the slack channel.
     "enterMessage": "Sit right there; make yourself comfortable. Remember the time we used to spend playing chess together?"
 }
 ```
-
