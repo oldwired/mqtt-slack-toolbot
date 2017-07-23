@@ -98,7 +98,7 @@ func doSlackRTM(api *slack.Client, config *config) {
 
 	for message := range rtm.IncomingEvents {
 		switch event := message.Data.(type) {
-		case *slack.MessageEvent: //TODO? Filter for config.Channel?
+		case *slack.MessageEvent: //TODO? Filter for config.Channel? C-> Channel; D-> Direct Message
 			if config.Debug {
 				fmt.Printf("Message: %v\n", event.Msg.Text)
 			}

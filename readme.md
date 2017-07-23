@@ -28,4 +28,12 @@ All messages to specified MQTT topics get posted to the slack channel.
 
 ## Limitations
 
-At the moment all messages of all Slack channel the bot is a member of get streamed to "topic4channel"
+At the moment all messages of all Slack channel the bot is a member of get streamed to "topic4channel", including "direct" messages
+
+## TODO
+
+* Filter Channel (see Limitations)
+* Support for direct messages
+1. pipe them to topic
+1. reply from topic (how?)
+* Optimize resolving of usernames
