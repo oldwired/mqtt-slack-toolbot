@@ -43,6 +43,14 @@ var handleSubscribedInboundMQTT mqtt.MessageHandler = func(client mqtt.Client, m
 	postMessagesChannel <- "TOPIC: " + msg.Topic() + " MSG: " + string(msg.Payload())
 }
 
+func checkSystemd() bool {
+	dirInfo, err := os.Lstat("/run/systemd/system")
+	if err != nil {
+		return false
+	}
+	return dirInfo.IsDir()
+}
+
 func readConfig() *config {
 
 	file, err := os.Open("config.json")
@@ -175,8 +183,12 @@ func main() {
 	go doMQTT(config, &wgReady)
 
 	wgReady.Wait() //wait till both Connector-Routines report ready
-	//systemd
-	daemon.SdNotify(false, "READY=1")
+	//Report Ready
+	if checkSystemd() {
+		daemon.SdNotify(false, "READY=1")
+	} else {
+		fmt.Println("Ready")
+	}
 
 	//block execution
 	<-control
