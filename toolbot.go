@@ -7,14 +7,17 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/nlopes/slack"
 )
 
 var messagesChannel chan string
 var postMessagesChannel chan string
+var control chan bool
 
 const (
 	channelBufferSize          = 23
@@ -61,7 +64,7 @@ func sendMessagesFromChannel(api *slack.Client, config *config, params slack.Pos
 	}
 }
 
-func doSlackAPI(config *config) {
+func doSlackAPI(config *config, wgReady *sync.WaitGroup) {
 	//setup
 	params := slack.PostMessageParameters{}
 	params.AsUser = true
@@ -74,6 +77,7 @@ func doSlackAPI(config *config) {
 	go sendMessagesFromChannel(api, config, params)
 
 	//Bot is online
+	wgReady.Done()
 	postMessagesChannel <- config.EnterMessage
 
 	//RTM
@@ -112,7 +116,7 @@ func doSlackRTM(api *slack.Client, config *config) {
 	}
 }
 
-func doMQTT(config *config) {
+func doMQTT(config *config, wgReady *sync.WaitGroup) {
 	if config.Debug {
 		mqtt.DEBUG = log.New(os.Stdout, "", 0)
 	}
@@ -136,6 +140,7 @@ func doMQTT(config *config) {
 	}
 
 	//Toolbot working
+	wgReady.Done()
 	token := mqttClient.Publish(config.BotStatusTopic, 0, true, toolbotOK)
 	if !token.WaitTimeout(2000) {
 		panic(fmt.Sprintln("Timeout waiting to publish"))
@@ -153,6 +158,9 @@ func doMQTT(config *config) {
 func main() {
 	messagesChannel = make(chan string, channelBufferSize)
 	postMessagesChannel = make(chan string, channelBufferSize)
+	control = make(chan bool)
+	var wgReady sync.WaitGroup
+	wgReady.Add(2) //2 Connectors: Slack and MQTT
 
 	//Config
 	config := readConfig()
@@ -161,8 +169,15 @@ func main() {
 	}
 
 	//SLACK
-	go doSlackAPI(config)
+	go doSlackAPI(config, &wgReady)
 
 	//MQTT test
-	doMQTT(config)
+	go doMQTT(config, &wgReady)
+
+	wgReady.Wait() //wait till both Connector-Routines report ready
+	//systemd
+	daemon.SdNotify(false, "READY=1")
+
+	//block execution
+	<-control
 }
